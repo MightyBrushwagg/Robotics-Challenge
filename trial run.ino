@@ -6,12 +6,12 @@
 
 
 ///WIFI///
-char ssid[] = "Conn";    
-char pass[] = "12345678"; 
+char ssid[] = "PhaseSpaceNetwork_2.4G";    
+char pass[] = "8igMacNet"; 
 
 WiFiUDP Udp;
 
-unsigned int localPort = 2390;  // Port to listen and send
+unsigned int localPort = 55500;  // Port to listen and send
 char packetBuffer[255];         // Buffer for incoming data
 IPAddress localIP;              // This device's IP
 char message[] = "Hello, self!";
@@ -19,7 +19,7 @@ char message[] = "Hello, self!";
 ///MOTORS///
 MotoronI2C mc1(0x10);  // First Motoron (default address)
 MotoronI2C mc2(0x11);  // Second Motoron (custom address)
-int performance_timer = 5000;
+int performance_timer = 50000;
 int start = 0;
 int current = 0;
 
@@ -57,11 +57,11 @@ unsigned long lastActionTime = 0;    // Last time action was taken
 
 
 Servo myServo;
-int pulse = 1300;          // Start from low end
+int pulse = 1400;          // Start from low end
 int direction = 1;         // 1 = increase, -1 = decrease
 int step = 5;              // Speed of change
 int minPulse = 1300;
-int maxPulse = 1700;
+int maxPulse = 1600;
 
 ///KILL SWITCH///
 volatile int alive = 1;
@@ -109,22 +109,22 @@ void setup() {
   lastButtonState = buttonState;
   myServo.attach(52);
 
-  Serial.print("Connecting to wifi...");
-  WiFi.begin(ssid, pass);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+  // Serial.print("Connecting to wifi...");
+  // WiFi.begin(ssid, pass);
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
 
-  localIP = WiFi.localIP();
-  Serial.println("\nConnected.");
-  Serial.print("Local IP: ");
-  Serial.println(localIP);
+  // localIP = WiFi.localIP();
+  // Serial.println("\nConnected.");
+  // Serial.print("Local IP: ");
+  // Serial.println(localIP);
 
-  // Start UDP
-  Udp.begin(localPort);
-  Serial.print("Listening on UDP port ");
-  Serial.println(localPort);
+  // // Start UDP
+  // Udp.begin(localPort);
+  // Serial.print("Listening on UDP port ");
+  // Serial.println(localPort);
 
   
 
@@ -136,15 +136,15 @@ void setup() {
 
 void loop() {
   int reading = digitalRead(buttonPin);
-  Serial.print(lastButtonState);
-  Serial.print(reading);
-  Serial.println(alive);
+  // Serial.print(lastButtonState);
+  // Serial.print(reading);
+  // Serial.println(alive);
 
   if (alive == 1) {
     // do stuff
     // Serial.println("I'm Alive");
     int packetSize = Udp.parsePacket();
-    if (packetSize) {
+    if (packetSize > 1) {
       Serial.print("Received packet of size ");
       Serial.println(packetSize);
       Udp.read(packetBuffer, 255);
@@ -166,43 +166,49 @@ void loop() {
 
     current = micros();
 
-    int mode = ((current - start) / performance_timer) % 5;
+    // int mode = ((current - start) / performance_timer) % 5;
 
-    switch(mode){
-      case 0: // forward
-        mc1.setSpeed(1, 2000);
-        mc1.setSpeed(2, 2000);
-        mc2.setSpeed(1, 2000); 
-        mc2.setSpeed(2, 2000);
-        break;
-      case 1: // backward
-        mc1.setSpeed(1, -2000);
-        mc1.setSpeed(2, -2000);
-        mc2.setSpeed(1, -2000); 
-        mc2.setSpeed(2, -2000);
-        break;
+    // switch(mode){
+    //   case 0: // forward
+    //     mc1.setSpeed(1, 2000);
+    //     mc1.setSpeed(2, -2000);
+    //     mc2.setSpeed(1, 2000); 
+    //     mc2.setSpeed(2, -2000);
+    //     break;
 
-      case 2: // left
-        mc1.setSpeed(1, 600);
-        mc1.setSpeed(2, 2000);
-        mc2.setSpeed(1, 600); 
-        mc2.setSpeed(2, 2000);
-        break;
+    //   case 1: // backward
+    //     mc1.setSpeed(1, -2000);
+    //     mc1.setSpeed(2, 2000);
+    //     mc2.setSpeed(1, -2000); 
+    //     mc2.setSpeed(2, 2000);
+    //     break;
+
+    //   case 2: // left
+    //     mc1.setSpeed(1, 1000);
+    //     mc1.setSpeed(2, -2000);
+    //     mc2.setSpeed(1, 1000); 
+    //     mc2.setSpeed(2, -2000);
+    //     break;
       
-      case 3: // right
-        mc1.setSpeed(1, 2000);
-        mc1.setSpeed(2, 600);
-        mc2.setSpeed(1, 2000); 
-        mc2.setSpeed(2, 600);
-        break;
+    //   case 3: // right
+    //     mc1.setSpeed(1, -2000);
+    //     mc1.setSpeed(2, 1000);
+    //     mc2.setSpeed(1, -2000); 
+    //     mc2.setSpeed(2, 1000);
+    //     break;
 
-      case 4: // stop
-        mc1.setSpeed(1, 0);
-        mc1.setSpeed(2, 0);
-        mc2.setSpeed(1, 0); 
-        mc2.setSpeed(2, 0);
-        break;
-    }
+    //   case 4: // stop
+    //     mc1.setSpeed(1, 0);
+    //     mc1.setSpeed(2, 0);
+    //     mc2.setSpeed(1, 0); 
+    //     mc2.setSpeed(2, 0);
+    //     break;
+    // }
+
+    mc1.setSpeed(1, 2000);
+    mc1.setSpeed(2, -2000);
+    mc2.setSpeed(1, 2000); 
+    mc2.setSpeed(2, -2000);
 
     for (int i = 0; i < numSensors; i++) {
     pinMode(sensorPins[i], OUTPUT);
@@ -239,10 +245,11 @@ void loop() {
 
     // Print the results
     for (int i = 0; i < numSensors; i++) {
-      // Serial.print(sensorValues[i]);
-      // Serial.print('\t');
+      Serial.print('\t');
+      Serial.print(sensorValues[i]);
+      Serial.print('\t');
     }
-    // Serial.println();
+    Serial.println();
 
     int sensorValue1 = analogRead(sensorPin1);
 
@@ -260,8 +267,8 @@ void loop() {
 
     // Serial.print("Voltage1: ");
     // Serial.print(voltage1, 2);
-    // Serial.print(" V\tDistance1: ");
-    // Serial.print(distance_cm1, 2);
+    Serial.print("\tDistance1: ");
+    Serial.print(distance_cm1, 2);
     // Serial.println(" cm");
 
     int sensorValue2 = analogRead(sensorPin2);
@@ -280,8 +287,8 @@ void loop() {
 
     // Serial.print("Voltage2: ");
     // Serial.print(voltage2, 2);
-    // Serial.print(" V\tDistance2: ");
-    // Serial.print(distance_cm2, 2);
+    Serial.print("\tDistance2: ");
+    Serial.print(distance_cm2, 2);
     // Serial.println(" cm");
 
     int sensorValue3 = analogRead(sensorPin3);
@@ -300,8 +307,8 @@ void loop() {
 
     // Serial.print("Voltage3: ");
     // Serial.print(voltage3, 2);
-    // Serial.print(" V\tDistance3: ");
-    // Serial.print(distance_cm3, 2);
+    Serial.print("\tDistance3: ");
+    Serial.print(distance_cm3, 2);
     // Serial.println(" cm");
 
     int reading = digitalRead(buttonPin);
