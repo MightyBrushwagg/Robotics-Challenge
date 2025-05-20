@@ -1,5 +1,5 @@
 //Update the new library for reflectance sensor
-#include <PWMServo.h>
+#include <Servo.h>
 #include <Motoron.h>
 
 // Motoron shields on I2C addresses 0x10 and 0x11
@@ -10,29 +10,29 @@ const int numSensors = 9;
 const int sensorPins[numSensors] = {31,30,33,32,35,34,37,36,39};
 unsigned int sensorValues[numSensors];
 bool sensor[numSensors];
-const unsigned int reflectanceThreshold = 1000; 
+const unsigned int reflectanceThreshold = 300; 
 
 // Steering servo
-#define SERVO_PIN   9
+#define SERVO_PIN   28
 #define FRONT       90
-#define SHARP_RIGHT (FRONT + 33)
-#define SHARP_LEFT  (FRONT - 40)
+#define SHARP_RIGHT (FRONT + 65)
+#define SHARP_LEFT  (FRONT - 65)
 
 // Speed params
-#define BASE_SPEED  150
-#define MAX_SPEED   200
-#define MIN_SPEED   100
+#define BASE_SPEED  60
+#define MAX_SPEED   90
+#define MIN_SPEED   40
 
 // PID gains
-const float Kp = 20.0, Ki = 0.5, Kd = 8.0;
+const float Kp = 3, Ki = 0, Kd = 0;
 float integral = 0, previousErr = 0;
 
-PWMServo head;
+Servo head;
 
 // Prototypes
 void InitializeMotorShield();
 void Sensor_Reading();
-void go_Advance(int speed);
+void go_Advance(int leftSpeed, int rightSpeed);
 void stop_Stop();
 void auto_tracking();
 
@@ -96,15 +96,21 @@ void Sensor_Reading() {
   }
 }
 
-void go_Advance(int speed) {
-  int16_t mSpeed = constrain(speed, MIN_SPEED, MAX_SPEED) * 4;
-  mc1.setSpeed(1, mSpeed);
-  mc1.setSpeed(2, mSpeed);
+void go_Advance(int leftSpeed, int rightSpeed) {
+  int16_t mL = constrain(leftSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  int16_t mR = constrain(rightSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  mc1.setSpeed(1, mL);
+  mc1.setSpeed(2, mR);
+  mc2.setSpeed(1, mL);
+  mc2.setSpeed(2, mR);
 }
+
 
 void stop_Stop() {
   mc1.setSpeed(1, 0);
   mc1.setSpeed(2, 0);
+  mc2.setSpeed(1, 0);
+  mc2.setSpeed(2, 0);
 }
 
 // Line-following with front-wheel PID steering
@@ -143,16 +149,22 @@ void auto_tracking() {
   // Steering output: map PID output to servo angle
   int angle = constrain(FRONT + int(output), SHARP_LEFT, SHARP_RIGHT);
   head.write(angle);
+  Serial.println(angle);
+  //delay(150);
 
   // Speed output: reduce speed if steering correction is large
-  int spd = constrain(BASE_SPEED - abs(int(output))*3, MIN_SPEED, MAX_SPEED);
+  int speedBase = constrain(BASE_SPEED - abs(int(output)) * 3, MIN_SPEED, MAX_SPEED);
+  int leftSpd   = speedBase - int(output * 2);
+  int rightSpd  = speedBase + int(output * 2);
+  Serial.println(leftSpd);
+  Serial.println(rightSpd);
 
   // Special cases: lost line or finish line
   if (sumH == 0) {
     // Line lost: center wheels and proceed slowly
     head.write(FRONT);
     int speed = MIN_SPEED;
-    go_Advance(MIN_SPEED);
+    go_Advance(MIN_SPEED, MIN_SPEED);
   }
   else if (sumH == 9) {
     // All sensors on line: assume finish line, stop
@@ -161,6 +173,6 @@ void auto_tracking() {
     return;
   }
   else {
-    go_Advance(MIN_SPEED);
+    go_Advance(leftSpd, rightSpd);
   }
 }
