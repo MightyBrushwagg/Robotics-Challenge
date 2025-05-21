@@ -1,4 +1,4 @@
-//Update the new library for reflectance sensor
+//0521 testing code
 #include <Servo.h>
 #include <Motoron.h>
 
@@ -6,8 +6,8 @@
 MotoronI2C mc1(0x10), mc2(0x11);
 
 // Reflectance sensors (9 channels)
-const int numSensors = 9;
-const int sensorPins[numSensors] = {31,30,33,32,35,34,37,36,39};
+const int numSensors = 13;
+const int sensorPins[numSensors] = {29,31,30,33,32,35,34,37,36,39,41,40,43};
 unsigned int sensorValues[numSensors];
 bool sensor[numSensors];
 const unsigned int reflectanceThreshold = 300; 
@@ -19,12 +19,12 @@ const unsigned int reflectanceThreshold = 300;
 #define SHARP_LEFT  (FRONT - 65)
 
 // Speed params
-#define BASE_SPEED  60
-#define MAX_SPEED   90
-#define MIN_SPEED   40
+#define BASE_SPEED  40
+#define MAX_SPEED   60
+#define MIN_SPEED   20
 
 // PID gains
-const float Kp = 3, Ki = 0, Kd = 0;
+const float Kp = 19, Ki = 0, Kd = 15; 
 float integral = 0, previousErr = 0;
 
 Servo head;
@@ -99,10 +99,10 @@ void Sensor_Reading() {
 void go_Advance(int leftSpeed, int rightSpeed) {
   int16_t mL = constrain(leftSpeed, MIN_SPEED, MAX_SPEED) * 4;
   int16_t mR = constrain(rightSpeed, MIN_SPEED, MAX_SPEED) * 4;
-  mc1.setSpeed(1, mL);
-  mc1.setSpeed(2, mR);
-  mc2.setSpeed(1, mL);
-  mc2.setSpeed(2, mR);
+  mc1.setSpeed(2, mL);
+  mc1.setSpeed(1, mR);
+  mc2.setSpeed(2, mL);
+  mc2.setSpeed(1, mR);
 }
 
 
@@ -133,12 +133,13 @@ void auto_tracking() {
   Serial.println();
 
   // Calculate error: weighted average of sensor positions
-  const int weight[9] = {-4,-3,-2,-1,0,1,2,3,4};
+  const int weight[numSensors] = {-6,-5-4,-3,-2,-1,0,1,2,3,4,5,6};
   int sumW = 0, sumH = 0;
   for (int i = 0; i < numSensors; i++) {
     if (sensor[i]) { sumW += weight[i]; sumH++; }
   }
   float error = (sumH>0) ? float(sumW)/sumH : 0;
+
 
   // 5) PID
   integral    += error;
@@ -147,15 +148,16 @@ void auto_tracking() {
   previousErr = error;
 
   // Steering output: map PID output to servo angle
-  int angle = constrain(FRONT + int(output), SHARP_LEFT, SHARP_RIGHT);
+  int angle = constrain(FRONT - int(output), SHARP_LEFT, SHARP_RIGHT);
   head.write(angle);
   Serial.println(angle);
   //delay(150);
+  
 
   // Speed output: reduce speed if steering correction is large
   int speedBase = constrain(BASE_SPEED - abs(int(output)) * 3, MIN_SPEED, MAX_SPEED);
-  int leftSpd   = speedBase - int(output * 2);
-  int rightSpd  = speedBase + int(output * 2);
+  int leftSpd   = speedBase - int(output * 1.5);
+  int rightSpd  = speedBase + int(output * 1.5);
   Serial.println(leftSpd);
   Serial.println(rightSpd);
 
