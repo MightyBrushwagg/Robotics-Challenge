@@ -2,12 +2,18 @@
 #include <Servo.h>
 #include <Motoron.h>
 
-// Motoron shields on I2C addresses 0x10 and 0x11
+// Motoron shields on I2C addresses 0x10 (front) and 0x11 (back)
 MotoronI2C mc1(0x10), mc2(0x11);
 
-// Reflectance sensors (9 channels)
-const int numSensors = 13;
-const int sensorPins[numSensors] = {29,31,30,33,32,35,34,37,36,39,41,40,43};
+// Reflectance sensors (13 channels)
+// const int numSensors = 13;
+// const int sensorPins[numSensors] = {29,31,30,33,32,35,34,37,36,39,41,40,43};
+// unsigned int sensorValues[numSensors];
+// bool sensor[numSensors];
+// const unsigned int reflectanceThreshold = 300; 
+
+const int numSensors = 9;
+const int sensorPins[numSensors] = {31,30,33,32,35,34,37,36,39};
 unsigned int sensorValues[numSensors];
 bool sensor[numSensors];
 const unsigned int reflectanceThreshold = 300; 
@@ -26,15 +32,10 @@ const unsigned int reflectanceThreshold = 300;
 // PID gains
 const float Kp = 19, Ki = 0, Kd = 15; 
 float integral = 0, previousErr = 0;
+// const int weight[numSensors] = {-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6};
+const int weight[numSensors] = {-4,-3,-2,-1,0,1,2,3,4};
 
 Servo head;
-
-// Prototypes
-void InitializeMotorShield();
-void Sensor_Reading();
-void go_Advance(int leftSpeed, int rightSpeed);
-void stop_Stop();
-void auto_tracking();
 
 void setup() {
   InitializeMotorShield();
@@ -46,6 +47,7 @@ void setup() {
 void loop() {
   auto_tracking();
 }
+
 
 void InitializeMotorShield() {
   Wire1.begin();
@@ -94,29 +96,6 @@ void Sensor_Reading() {
   for (int i = 0; i < numSensors; i++) {
     if (!done[i]) sensorValues[i] = timeout;
   }
-}
-
-void go_Advance(int leftSpeed, int rightSpeed) {
-  int16_t mL = constrain(leftSpeed, MIN_SPEED, MAX_SPEED) * 4;
-  int16_t mR = constrain(rightSpeed, MIN_SPEED, MAX_SPEED) * 4;
-  mc1.setSpeed(2, mL);
-  mc1.setSpeed(1, mR);
-  mc2.setSpeed(2, mL);
-  mc2.setSpeed(1, mR);
-}
-
-
-void stop_Stop() {
-  mc1.setSpeed(1, 0);
-  mc1.setSpeed(2, 0);
-  mc2.setSpeed(1, 0);
-  mc2.setSpeed(2, 0);
-}
-
-// Line-following with front-wheel PID steering
-void auto_tracking() {
-  Sensor_Reading();
-
   //Convert to binary states based on threshold
   for (int i = 0; i < numSensors; i++) {
     sensor[i] = (sensorValues[i] < reflectanceThreshold);
@@ -131,9 +110,48 @@ void auto_tracking() {
     Serial.print(sensor[i] ? '1' : '0');
   }
   Serial.println();
+}
 
-  // Calculate error: weighted average of sensor positions
-  const int weight[numSensors] = {-6,-5-4,-3,-2,-1,0,1,2,3,4,5,6};
+void go_Advance_2_wheel(int leftSpeed, int rightSpeed) {
+  int16_t mL = constrain(leftSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  int16_t mR = constrain(rightSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  mc1.setSpeed(2, mL);
+  mc1.setSpeed(1, mR);
+  mc2.setSpeed(2, mL);
+  mc2.setSpeed(1, mR);
+}
+
+void go_Advance_4_wheel(int leftFrontSpeed, int rightFrontSpeed, int leftBackSpeed, int rightBackSpeed) {
+  int16_t FmL = constrain(leftFrontSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  int16_t FmR = constrain(rightFrontSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  int16_t BmL = constrain(leftBackSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  int16_t BmR = constrain(rightBackSpeed, MIN_SPEED, MAX_SPEED) * 4;
+  mc1.setSpeed(2, FmL);
+  mc1.setSpeed(1, FmR);
+  mc2.setSpeed(2, BmL);
+  mc2.setSpeed(1, BmR);
+}
+
+void stop_Stop() {
+  mc1.setSpeed(1, 0);
+  mc1.setSpeed(2, 0);
+  mc2.setSpeed(1, 0);
+  mc2.setSpeed(2, 0);
+}
+
+float pid(float error){
+  // 5) PID
+  integral += error;
+  float derivative = error - previousErr;
+  float output = Kp*error + Ki*integral + Kd*derivative;
+  previousErr = error;
+  return output;
+}
+
+// Line-following with front-wheel PID steering
+void auto_tracking() {
+  Sensor_Reading();
+  
   int sumW = 0, sumH = 0;
   for (int i = 0; i < numSensors; i++) {
     if (sensor[i]) { sumW += weight[i]; sumH++; }
@@ -141,11 +159,7 @@ void auto_tracking() {
   float error = (sumH>0) ? float(sumW)/sumH : 0;
 
 
-  // 5) PID
-  integral    += error;
-  float derivative = error - previousErr;
-  float output     = Kp*error + Ki*integral + Kd*derivative;
-  previousErr = error;
+  float output = pid(error);
 
   // Steering output: map PID output to servo angle
   int angle = constrain(FRONT - int(output), SHARP_LEFT, SHARP_RIGHT);
@@ -166,7 +180,7 @@ void auto_tracking() {
     // Line lost: center wheels and proceed slowly
     head.write(FRONT);
     int speed = MIN_SPEED;
-    go_Advance(MIN_SPEED, MIN_SPEED);
+    go_Advance_2_wheel(MIN_SPEED, MIN_SPEED);
   }
   else if (sumH == 9) {
     // All sensors on line: assume finish line, stop
@@ -175,6 +189,41 @@ void auto_tracking() {
     return;
   }
   else {
-    go_Advance(leftSpd, rightSpd);
+    go_Advance_2_wheel(leftSpd, rightSpd);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
