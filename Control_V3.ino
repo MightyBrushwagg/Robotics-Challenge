@@ -6,16 +6,11 @@
 MotoronI2C mc1(0x10), mc2(0x11);
 
 // Reflectance sensors (13 channels)
-// const int numSensors = 13;
-// const int sensorPins[numSensors] = {29,31,30,33,32,35,34,37,36,39,41,40,43};
-// unsigned int sensorValues[numSensors];
-// bool sensor[numSensors];
-// const unsigned int reflectanceThreshold = 300; 
-
-const int numSensors = 9;
-const int sensorPins[numSensors] = {31,30,33,32,35,34,37,36,39};
-unsigned int sensorValues[numSensors];
-bool sensor[numSensors];
+const int numReflectanceSensors = 13;
+const int sensorPins[numReflectanceSensors] = {31,30,33,32,35,34,37,36,39,41,40,43,42};
+unsigned int sensorValuesFull[numReflectanceSensors];
+unsigned int sensorValuesBinary[numReflectanceSensors];
+// bool sensor[numReflectanceSensors];
 const unsigned int reflectanceThreshold = 300; 
 
 // Steering servo
@@ -32,8 +27,15 @@ const unsigned int reflectanceThreshold = 300;
 // PID gains
 const float Kp = 19, Ki = 0, Kd = 15; 
 float integral = 0, previousErr = 0;
-// const int weight[numSensors] = {-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6};
-const int weight[numSensors] = {-4,-3,-2,-1,0,1,2,3,4};
+const int weight[numReflectanceSensors] = {-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6};
+// const int weight[numSensors] = {-4,-3,-2,-1,0,1,2,3,4};
+
+const int numIRSensors = 3;
+const int IRPins[numIRSensors] = {A7, A6, A5};
+unsigned int IRValues[numIRSensors];
+float voltageIR[numIRSensors];
+float distanceIR[numIRSensors];
+
 
 Servo head;
 
@@ -42,6 +44,7 @@ void setup() {
   head.attach(SERVO_PIN);
   head.write(FRONT);
   Serial.begin(9600);
+  analogReadResolution(12);
 }
 
 void loop() {
@@ -68,9 +71,9 @@ void InitializeMotorShield() {
   }
 }
 
-void Sensor_Reading() {
+void Reflectance_Sensor_Reading() {
   // 1) Charge cycle
-  for (int i = 0; i < numSensors; i++) {
+  for (int i = 0; i < numReflectanceSensors; i++) {
     pinMode(sensorPins[i], OUTPUT);
     digitalWrite(sensorPins[i], HIGH);
   }
@@ -78,38 +81,62 @@ void Sensor_Reading() {
 
   // 2) Begin discharge
   unsigned long startTime = micros();
-  for (int i = 0; i < numSensors; i++) {
+  for (int i = 0; i < numReflectanceSensors; i++) {
     pinMode(sensorPins[i], INPUT);
   }
 
   // 3) Measure discharge time
-  bool done[numSensors] = {false};
+  bool done[numReflectanceSensors] = {false};
   unsigned long timeout = 3000;
   while (micros() - startTime < timeout) {
-    for (int i = 0; i < numSensors; i++) {
+    for (int i = 0; i < numReflectanceSensors; i++) {
       if (!done[i] && digitalRead(sensorPins[i]) == LOW) {
-        sensorValues[i] = micros() - startTime;
+        sensorValuesFull[i] = micros() - startTime;
         done[i] = true;
       }
     }
   }
-  for (int i = 0; i < numSensors; i++) {
-    if (!done[i]) sensorValues[i] = timeout;
+  for (int i = 0; i < numReflectanceSensors; i++) {
+    if (!done[i]) sensorValuesFull[i] = timeout;
   }
   //Convert to binary states based on threshold
-  for (int i = 0; i < numSensors; i++) {
-    sensor[i] = (sensorValues[i] < reflectanceThreshold);
+  for (int i = 0; i < numReflectanceSensors; i++) {
+    sensorValuesBinary[i] = (sensorValuesFull[i] < reflectanceThreshold);
   }
 
   // Debug: print raw values and binary state
-  for (int i = 0; i < numSensors; i++) {
-    Serial.print(sensorValues[i]); Serial.print('\t');
+  for (int i = 0; i < numReflectanceSensors; i++) {
+    Serial.print(sensorValuesFull[i]); Serial.print('\t');
   }
   Serial.print("| ");
-  for (int i = 0; i < numSensors; i++) {
-    Serial.print(sensor[i] ? '1' : '0');
+  for (int i = 0; i < numReflectanceSensors; i++) {
+    Serial.print(sensorValuesBinary[i] ? '1' : '0');
   }
   Serial.println();
+}
+
+void IR_Sensor_Reading() {
+  for (int i=0; i<numIRSensors; i++){
+    IRValues[i] = analogRead(IRPins[i]);
+
+    // Convert ADC value (0–4095) to voltage (0–5V)
+    voltageIR[i] = IRValues[i] * (5.0 / 4095.0);
+
+    // Approximate distance from voltage based on datasheet
+    // From Sharp's graph, at 0.4V = 15cm, at 1.65V = 2cm
+    // Reverse linear interpolation between those two:
+    distanceIR[i] = (-13.0 * voltageIR[i]) + 23.2;
+
+    // Clamp output to valid range
+    if (distanceIR[i] < 2) distanceIR[i] = 2;
+    if (distanceIR[i] > 15) distanceIR[i] = 15;
+
+    // Serial.print("Voltage1: ");
+    // Serial.print(voltage1, 2);
+    Serial.print("\tDistance1: ");
+    Serial.print(distanceIR[i], 2);
+    // Serial.println(" cm");
+  }
 }
 
 void go_Advance_2_wheel(int leftSpeed, int rightSpeed) {
@@ -150,11 +177,11 @@ float pid(float error){
 
 // Line-following with front-wheel PID steering
 void auto_tracking() {
-  Sensor_Reading();
+  Reflectance_Sensor_Reading();
   
   int sumW = 0, sumH = 0;
-  for (int i = 0; i < numSensors; i++) {
-    if (sensor[i]) { sumW += weight[i]; sumH++; }
+  for (int i = 0; i < numReflectanceSensors; i++) {
+    if (sensorValuesFull[i]) { sumW += weight[i]; sumH++; }
   }
   float error = (sumH>0) ? float(sumW)/sumH : 0;
 
