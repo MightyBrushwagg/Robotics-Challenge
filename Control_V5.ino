@@ -27,7 +27,7 @@ const unsigned int reflectanceThreshold = 500;
 
 // PID gains
 //const float Kp = 0, Ki = 0, Kd = 0; 
-const float Kp = 30, Ki = 0, Kd = 0; 
+const float Kp = 34, Ki = 5, Kd = 10; 
 float integral = 0, previousErr = 0;
 const int weight[numReflectanceSensors] = {-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6};
 
@@ -206,8 +206,8 @@ void auto_tracking() {
   
   // Speed output: reduce speed if steering correction is large
   int speedBase = constrain(BASE_SPEED - abs(int(output)) * 3, MIN_SPEED, MAX_SPEED);
-  int leftSpd   = speedBase - int(output * 1.5);
-  int rightSpd  = speedBase + int(output * 1.5);
+  int leftSpd   = speedBase - int(output * 1.0);
+  int rightSpd  = speedBase + int(output * 1.0);
   Serial.println(leftSpd);
   Serial.println(rightSpd);
 
