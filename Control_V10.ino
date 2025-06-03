@@ -122,9 +122,8 @@ void go_Advance_4_wheel(int leftFrontSpeed, int rightFrontSpeed, int leftBackSpe
 
 void stop_Stop();
 float pid(float error);
+RobotMode check_crossroad();
 void take_crossroad();
-void check_crossroad();
-RobotMode determine_line_status();
 void auto_tracking();
 
 void wall_following();
@@ -153,7 +152,7 @@ void loop() {
 
   switch (mode) {
     case MODE_LINE_FOLLOWING: {
-      mode = determine_line_status();
+      mode = check_crossroad();
       if (mode == MODE_LINE_FOLLOWING) {
         auto_tracking();
       }
@@ -308,60 +307,7 @@ float pid(float error) {
   return Kp * error + Ki * integral + Kd * derivative;
 }
 
-void take_crossroad() {
-  if (currentCrossroad >= numCrossroads) {
-    mode = MODE_LINE_FOLLOWING;
-    return;
-  }
-
-  //Debug
-  static int lastCrossroadPrinted = -1;
-  if (currentCrossroad != lastCrossroadPrinted) {
-    Serial.print("Taking Crossroad #");
-    Serial.print(currentCrossroad + 1);
-    Serial.print(" → ");
-    Serial.println(directionToString(crossroadDirections[currentCrossroad]));
-    lastCrossroadPrinted = currentCrossroad;
-  }
-
-  // Set Angles
-  int turnAngle;
-  switch (crossroadDirections[currentCrossroad]) {
-    case LEFT:     turnAngle = SHARP_LEFT; break;
-    case RIGHT:    turnAngle = SHARP_RIGHT; break;
-    case STRAIGHT: turnAngle = FRONT; break;
-    default:       turnAngle = FRONT;
-  }
-
-  head.write(turnAngle);
-  Reflectance_Sensor_Reading();
-
-  if (micros() - startedTurn >= crossroadThreshold) {
-    currentCrossroad++;
-    mode = MODE_LINE_FOLLOWING;
-  }
-}
-
-void check_crossroad() {
-  Reflectance_Sensor_Reading();
-
-  int zeroBefore = 0;
-  int zeroThenOne = 0;
-  for (int i = 0; i < numReflectanceSensors - 1; i++) {
-    if (sensorValuesBinary[i] == 0 && zeroThenOne == 0) {
-      zeroBefore = 1;
-    } else if (sensorValuesBinary[i] == 1 && zeroBefore == 1) {
-      zeroThenOne = 1;
-    } else if (sensorValuesBinary[i] == 0 && zeroThenOne == 1) {
-      // Confirm whether it is a crossroad
-      mode = MODE_CROSSROAD_TAKING;
-      startedTurn = micros();
-      break;
-    }
-  }
-}
-
-RobotMode determine_line_status() {
+RobotMode check_crossroad() {
     Reflectance_Sensor_Reading();
 
     // count the number of black lines
@@ -414,6 +360,47 @@ RobotMode determine_line_status() {
     return MODE_LINE_FOLLOWING;
 }
 
+void take_crossroad() {
+  if (currentCrossroad >= numCrossroads) {
+    mode = MODE_LINE_FOLLOWING;
+    return;
+  }
+
+  static int lastCrossroadPrinted = -1;
+  if (currentCrossroad != lastCrossroadPrinted) {
+    Serial.print("Taking Crossroad #");
+    Serial.print(currentCrossroad + 1);
+    Serial.print(" → ");
+    Serial.println(directionToString(crossroadDirections[currentCrossroad]));
+    lastCrossroadPrinted = currentCrossroad;
+  }
+
+  int turnAngle;
+  switch (crossroadDirections[currentCrossroad]) {
+    case LEFT:     turnAngle = FRONT - 30; break;
+    case RIGHT:    turnAngle = FRONT + 30; break;
+    case STRAIGHT: turnAngle = FRONT; break;
+    default:       turnAngle = FRONT;
+  }
+
+  head.write(turnAngle);
+  go_Advance_2_wheel(BASE_SPEED, BASE_SPEED);
+  Reflectance_Sensor_Reading();
+
+  // Back to the single line tracking
+  int midStart = (numReflectanceSensors - 5) / 2;
+  int midCount = 0;
+  for (int i = midStart; i < midStart + 5; i++) {
+    if (sensorValuesBinary[i]) midCount++;
+  }
+
+  if (midCount >= 3 && midCount <= 5) {
+    Serial.println("Back to single line, resuming line tracking.");
+    currentCrossroad++;
+    mode = MODE_LINE_FOLLOWING;
+  }
+}
+
 // Line-following with front-wheel PID steering
 void auto_tracking() {
   Reflectance_Sensor_Reading();
@@ -453,7 +440,6 @@ void auto_tracking() {
 
     go_Advance_2_wheel(leftSpd, rightSpd);
     head.write(angle);
-  }
 }
 
 void wall_following() {
@@ -543,7 +529,7 @@ void button_check() {
           }
           else{
             lastmode = mode;
-            mode = 0;
+            mode = MODE_DEAD;
             Serial.println("Dead");
           }
         }
