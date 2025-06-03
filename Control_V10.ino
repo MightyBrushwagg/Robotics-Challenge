@@ -523,7 +523,7 @@ void button_check() {
           Serial.println("Button Released!");
           //digitalWrite(ledPin, HIGH);
           lastActionTime = currentTime;
-          if (mode == 0) {
+          if (mode == MODE_DEAD) {
             mode = lastmode;
             Serial.println("Back from the dead");
           }
