@@ -80,8 +80,8 @@ Servo head;
 Servo lift;
 
 // Crossroads
-const int numCrossroads = 1; //===============================<>===================================
-const Direction crossroadDirections[numCrossroads] = {LEFT};  //===============================<>===================================
+const int numCrossroads = 1; 
+const Direction crossroadDirections[numCrossroads] = {LEFT};  
 int currentCrossroad = 0;
 //int crossroading = 0;
 unsigned int startedTurn;
@@ -454,7 +454,7 @@ void auto_tracking() {
   }
   float error = (sumH>0) ? float(sumW)/sumH : 0;
 
-  //************************DBUG*************************
+  //************************DEBUG*************************
   // // Serial.print("Err: "); Serial.print(error, 2);
   float output = pid(error);  
   // // Serial.print("  Out: "); Serial.print(output, 2);
@@ -557,8 +557,12 @@ void turnRight() {
 }
 
 void lifting(){
+  go_Advance_2_wheel(MIN_SPEED, MIN_SPEED);
+  delay(50);
   lift.write(90);
-  go_Advance_2_wheel(800, 800);
+  go_Advance_2_wheel(MAX_SPEED, MAX_SPEED);
+  delay(50);
+  lift.write(135);
 }
 
 //button_check();
