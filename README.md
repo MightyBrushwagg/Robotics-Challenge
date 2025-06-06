@@ -2,7 +2,7 @@
 
 This repository contains the codebase and documentation for Team 404 (Group 9) in the UCL Robotics and AI Year 1 Challenge. The team members are Morgan, Ian, Xavier, and Helitha.
 
-Our robot, **PAXTON**, is designed to autonomously traverse a complex obstacle course using a combination of advanced mobility, sensors, and preprogrammed logic. Paxman features:
+Our robot, **PAXTON**, is designed to autonomously traverse a complex obstacle course using a combination of advanced mobility, sensors, and preprogrammed logic. Paxton features:
 
 - **Passively transforming wheels** to assist in climbing over uneven terrain while being smooth on even surfaces.
 - **Ackermann steering and differential drive**, allowing both agile turning and stable movement.
