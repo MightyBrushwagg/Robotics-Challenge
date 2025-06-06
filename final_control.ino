@@ -150,44 +150,41 @@ void setup() {
   analogReadResolution(12);
 }
 
-// void loop() {
-//   Reflectance_Sensor_Reading();
+void loop() {
+  Reflectance_Sensor_Reading();
 
-//   if (mode != lastPrintedMode) {
-//     Serial.print("MODE CHANGED: ");
-//     Serial.println(modeToString(mode));
-//     lastPrintedMode = mode;
-//   }
+  if (mode != lastPrintedMode) {
+    Serial.print("MODE CHANGED: ");
+    Serial.println(modeToString(mode));
+    lastPrintedMode = mode;
+  }
 
-//   switch (mode) {
-//     case MODE_LINE_FOLLOWING: {
-//       mode = check_crossroad();
-//       if (mode == MODE_LINE_FOLLOWING) {
-//         auto_tracking();
-//       }
-//       break;
-//     }
+  switch (mode) {
+    case MODE_LINE_FOLLOWING: {
+      mode = check_crossroad();
+      if (mode == MODE_LINE_FOLLOWING) {
+        auto_tracking();
+      }
+      break;
+    }
 
-//     case MODE_CROSSROAD_TAKING:
-//       take_crossroad();
-//       break;
+    case MODE_CROSSROAD_TAKING:
+      take_crossroad();
+      break;
 
-//     case MODE_WALL_FOLLOWING:
-//       wall_following();
-//       break;
+    case MODE_WALL_FOLLOWING:
+      wall_following();
+      break;
 
-//     // case MODE_TURN_RIGHT:
-//     //   turnRight();
-//     //   break;
+    // case MODE_TURN_RIGHT:
+    //   turnRight();
+    //   break;
 
-//     case MODE_DEAD:
-//     default:
-//       stop_Stop();
-//       break;
-//   }
-// }
-void loop(){
-  lifting();
+    case MODE_DEAD:
+    default:
+      stop_Stop();
+      break;
+  }
 }
 
 //******************************************************************FUNCTIONS******************************************************************
