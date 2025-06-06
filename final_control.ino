@@ -502,55 +502,52 @@ void auto_tracking() {
   // }
 }
 
-// void wall_following() {
-//   IR_Sensor_Reading();
+void wall_following() {
+  IR_Sensor_Reading();
 
-//   //gets sensor readings and assigns them to variables
-//   float leftDistance  = distanceIR[0];
-//   float rightDistance = distanceIR[1];
-//   float frontDistance = distanceIR[2];
+  //gets sensor readings and assigns them to variables
+  float leftDistance  = distanceIR[0];
+  float rightDistance = distanceIR[1];
+  float frontDistance = distanceIR[2];
 
-//   //assigns condtions based on walls to variables
-//   bool frontWall = frontDistance < frontThreshold;
-//   bool rightWall = rightDistance < 14.0;
-//   bool leftWall  = leftDistance < 14.0;
+  //assigns condtions based on walls to variables
+  bool frontWall = frontDistance < frontThreshold;
+  bool rightWall = rightDistance < 14.0;
+  bool leftWall  = leftDistance < 14.0;
 
-//   Serial.print("Left: "); Serial.print(leftDistance, 1);
-//   Serial.print(" cm\tRight: "); Serial.print(rightDistance, 1);
-//   Serial.print(" cm\tFront: "); Serial.print(frontDistance, 1);
-//   Serial.println(" cm");
+  Serial.print("Left: "); Serial.print(leftDistance, 1);
+  Serial.print(" cm\tRight: "); Serial.print(rightDistance, 1);
+  Serial.print(" cm\tFront: "); Serial.print(frontDistance, 1);
+  Serial.println(" cm");
 
-//   // state change
-//   if (frontWall && leftWall && !rightWall) {
-//     Serial.println("front and left wall detected - turn RIGHT by 90 deg");
-//     stateWall = TURNING;
-//     turnStartTime = millis();
-//     turnRight(); // start turning
-//     return;
-//   }
+  // state change
+  if (frontWall && leftWall && !rightWall) {
+    Serial.println("front and left wall detected - turn RIGHT by 90 deg");
+    stateWall = TURNING;
+    turnStartTime = millis();
+    turnRight(); // start turning
+    return;
+  }
 
-//   float error;
-//   if (leftWall && rightWall) {
-//     Serial.println("Walls on both sides - centering");
-//     error = rightDistance - leftDistance;
-//   } else {
-//     Serial.println("Left wall only - follow left wall");
-//     error = idealWallDistance - leftDistance;
-//   }
+  float error;
+  if (leftWall && rightWall) {
+    Serial.println("Walls on both sides - centering");
+    error = rightDistance - leftDistance;
+  } else {
+    Serial.println("Left wall only - follow left wall");
+    error = idealWallDistance - leftDistance;
+  }
 
-//   //centering using differential drive
-//   int correction = Kp_wall * error;
-//   int leftSpeed  = constrain(BASE_SPEED + correction, MIN_SPEED, MAX_SPEED);
-//   int rightSpeed = constrain(BASE_SPEED - correction, MIN_SPEED, MAX_SPEED);  
+  //centering using differential drive
+  int correction = Kp_wall * error;
+  int leftSpeed  = constrain(BASE_SPEED + correction, MIN_SPEED, MAX_SPEED);
+  int rightSpeed = constrain(BASE_SPEED - correction, MIN_SPEED, MAX_SPEED);  
 
-//   go_Advance_2_wheel(leftSpeed, rightSpeed);
+  go_Advance_2_wheel(leftSpeed, rightSpeed);
 
-//   Serial.print("correction: "); Serial.print(correction);
-//   Serial.print("\tLeft Speed: "); Serial.print(leftSpeed);
-//   Serial.print("\tRight Speed: "); Serial.println(rightSpeed);
-// }
-void wall_following(){
-  stop_Stop();
+  Serial.print("correction: "); Serial.print(correction);
+  Serial.print("\tLeft Speed: "); Serial.print(leftSpeed);
+  Serial.print("\tRight Speed: "); Serial.println(rightSpeed);
 }
 
 void turnRight() {
