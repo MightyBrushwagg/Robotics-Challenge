@@ -2,7 +2,7 @@
 
 This repository contains the codebase and documentation for Team 404 (Group 9) in the UCL Robotics and AI Year 1 Challenge. The team members are Morgan, Ian, Xavier, and Helitha.
 
-Our robot, **Paxman**, is designed to autonomously traverse a complex obstacle course using a combination of advanced mobility, sensors, and preprogrammed logic. Paxman features:
+Our robot, **PAXTON**, is designed to autonomously traverse a complex obstacle course using a combination of advanced mobility, sensors, and preprogrammed logic. Paxman features:
 
 - **Passively transforming wheels** to assist in climbing over uneven terrain while being smooth on even surfaces.
 - **Ackermann steering and differential drive**, allowing both agile turning and stable movement.
@@ -21,7 +21,7 @@ Our robot, **Paxman**, is designed to autonomously traverse a complex obstacle c
 - Final_control.ino: The final version of the code deployed to the Arduino for the obstacle course challenge
 ---
 
-## How to Operate Paxman
+## How to Operate Paxton
 
 1. **Start/Stop:**  
    - Press the onboard button to start the robot.
