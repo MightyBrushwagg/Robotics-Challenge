@@ -1,58 +1,89 @@
-# Robotics-Challenge: Obstacle Course
+# Robotics Challenge: Obstacle Course
 
-This is the repository for team 404 (group 9) in the UCL RAI first year robotics challenge.
+This repository contains the codebase and documentation for Team 404 (Group 9) in the UCL Robotics and AI Year 1 Challenge. The team members are Morgan, Ian, Xavier, and Helitha.
 
-The team members are Morgan, Ian, Xavier and Helitha.
+Our robot, **Paxman**, is designed to autonomously traverse a complex obstacle course using a combination of advanced mobility, sensors, and preprogrammed logic. Paxman features:
 
-Our robot Paxman utilises passively transforming wheels to climb and an ackerman steering differential drive combo to move. A gripper to hook onto any high lines (lava pit and zipline) to get over obstacles.
+- **Passively transforming wheels** to assist in climbing over uneven terrain while being smooth on even surfaces.
+- **Ackermann steering and differential drive**, allowing both agile turning and stable movement.
+- A **servo-actuated gripper** mechanism to hook onto elevated structures such as the lava pit and zipline for obstacle traversal.
 
-Final_control.ino is the script that was loaded into the arduino for the run.
+---
 
-The folder structure is as follows:
+## Repository Structure
 
-- Trial run: Individual scripts for components, specifically for the first trial run
-- wall following versions: Successive code prototypes for our wall following algorithm
-- control versions: The main code that goes on the robot for the challenge, includes all line following logic
+- Trial run: Component-level test scripts used during early development
 
+- wall following versions: Iterative prototypes of the wall-following algorithm
 
+- control versions: Full control scripts including line following, crossroad handling, and obstacle interaction
 
-How to use the robot: 
--
-First, to set the robot off, press the button. Pressing the button again stopped the robot, alternatively, it could receive the message "stop" over wifi which had the same effect. button_check() and wifi_check() were the two funcitons used for the kill switch testing.
+- Final_control.ino: The final version of the code deployed to the Arduino for the obstacle course challenge
+---
 
-To do line following that involves crossroads and turns, the route must be preprogrammed in crossroadDirections as it may not pick the right path otherwise.
+## How to Operate Paxman
 
-All four motors could be controlled separately or left and right can be controlled by using  go_Advance_4_wheel(int leftFrontSpeed, int rightFrontSpeed, int leftBackSpeed, int rightBackSpeed) and go_Advance_2_wheel(int leftSpeed, int rightSpeed) respectively. To stop all motors, either set those speeds to 0 or use stop_Stop() which does that.
+1. **Start/Stop:**  
+   - Press the onboard button to start the robot.
+   - Press again to stop.
+   - Alternatively, a `"stop"` command received over WiFi will halt the robot.
 
-To get readings from the reflectance sensors, use the function Reflectance_Sensor_Reading() which stores values from all the reflectance sensors in the array sensorvaluesFull in the same order they are on the robot. In addition, by using a threshold (ReflectanceThreshold), sensorValuesBinary tracks whether a sensor is seeing black or white line. These are accessed by the line following logic.
+   These inputs are handled by the `button_check()` and `wifi_check()` functions.
 
-IR_Sensor_Reading() does the same as the reflectance sensor reading function, the distances are stored in distanceIR.
+2. **Navigation Modes:**  
+   The robot operates in four distinct modes, each represented by an integer:
+   - `MODE_DEAD`: Robot is stopped (kill switch activated).
+   - `MODE_LINE_FOLLOWING`: Follows the black line using reflectance sensors.
+   - `MODE_CROSSROAD_TAKING`: Executes a predefined direction at a detected crossroad.
+   - `MODE_WALL_FOLLOWING`: Follows walls using IR distance sensors.
 
-The robot has 4 robotMode:
+3. **Line Following and Crossroads:**  
+   - Crossroads must be preprogrammed in the `crossroadDirections[]` array (e.g., `{LEFT, STRAIGHT, RIGHT}`).
+   - Functions involved:
+     - `auto_tracking()`: Main PID-based line following.
+     - `check_crossroad()`: Detects forks and crossroads.
+     - `take_crossroad()`: Executes the programmed direction.
 
-- MODE_DEAD: motors stopped, kill switch activated
-- MODE_LINE_FOLLOWING, follows line using algorithm
-- MODE_CROSSROAD_TAKING, is taking a crossroad
-- MODE_WALL_FOLLOWING, follows wall using algorithm
+4. **Wall Following:**  
+   - The `wall_following()` function uses data from IR sensors to navigate parallel to walls.
+   - If the robot encounters a frontal obstacle, `turn_right()` is invoked to change direction.
 
-Control algorithms:
--
+5. **Obstacle Handling (Lava Pit & Zipline):**  
+   - The robot uses the `lifting()` function to raise its gripper mechanism and latch onto elevated supports.
+   - Once hooked, the robot drives forward to cross the obstacle.
 
-take_crossroad(), check_crossroad and auto_tracking() do the line following.
-check_crossroad tells the robot if it is at a crossroad, if it is, take_crossroad takes over and the robot takes the crossroad from the predefined path. Otherwise auto_tracking takes over and the robot moves following the line.
+---
 
-wall_following() contains all the logic to follow the wall when there is no line to follow, utilising the turn_right() function when needed.
+## Core Sensor Functions
 
-To hook onto the lava pit and zipline, the robot uses the lifting() mechanism which extends the arms up to grip on, it then drives forward
+- `Reflectance_Sensor_Reading()`:  
+  Populates `sensorValuesFull[]` with raw discharge times from each reflectance sensor.  
+  Applies a threshold to produce binary readings in `sensorValuesBinary[]`.
+  Both arrays are stored in the same order and direction as the actual robot.
 
+- `IR_Sensor_Reading()`:  
+  Reads analog values from IR distance sensors and estimates distances (in cm), stored in `distanceIR[]`.
 
+---
 
+## Motor Control Functions
 
+- `go_Advance_4_wheel(int leftFrontSpeed, int rightFrontSpeed, int leftBackSpeed, int rightBackSpeed)`:  
+  Controls all four motors individually.
 
+- `go_Advance_2_wheel(int leftSpeed, int rightSpeed)`:  
+  Controls the left and right side motors together for simpler movement.
 
+- `stop_Stop()`:  
+  Stops all motors immediately, alternatively either of the previous two functions can be called with speed 0 for all motors.
 
+---
 
+## Notes
 
+- The PID controller for line following is tuned using:
+  - `Kp = 30`
+  - `Ki = 0`
+  - `Kd = 0`
 
-
-
+- Reflectance sensor data is processed in real-time to determine lateral error, which is corrected by PID output.
